@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Dice Roll - Multiplayer Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        .dice {
+            transform-style: preserve-3d;
+            transition: transform 1.5s;
+        }
+        .side {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 2px solid #ffffff;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            background: rgba(255, 255, 255, 0.9);
+        }
+        .front  { transform: translateZ(25px); }
+        .back   { transform: rotateX(-180deg) translateZ(25px); }
+        .right  { transform: rotateY(90deg) translateZ(25px); }
+        .left   { transform: rotateY(-90deg) translateZ(25px); }
+        .top    { transform: rotateX(90deg) translateZ(25px); }
+        .bottom { transform: rotateX(-90deg) translateZ(25px); }
+
+        .player-active {
+            border: 3px solid #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+
+        @media (max-width: 640px) {
+            .dice {
+                width: 50px !important;
+                height: 50px !important;
+            }
+            .side {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-500 to-purple-600 min-h-screen p-4">
+    <div class="container mx-auto max-w-4xl">
+        <!-- Game Setup -->
+        <div id="setup" class="bg-white rounded-lg p-6 shadow-lg mb-6">
+            <h1 class="text-3xl font-bold text-center mb-4">🎲 3D Dice Roll Game</h1>
+            <div class="flex flex-col items-center gap-4">
+                <label class="text-lg">Number of Players (1-4):</label>
+                <select id="playerCount" class="px-4 py-2 border rounded-lg">
+                    <option value="1">1 Player</option>
+                    <option value="2">2 Players</option>
+                    <option value="3">3 Players</option>
+                    <option value="4">4 Players</option>
+                </select>
+                <button onclick="startGame()" class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition">
+                    Start Game
+                </button>
+            </div>
+        </div>
+
+        <!-- Game Board -->
+        <div id="gameBoard" class="hidden">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <!-- Player cards will be inserted here -->
+            </div>
+
+            <!-- Dice Container -->
+            <div class="flex justify-center items-center mb-6">
+                <div class="dice w-[100px] h-[100px] relative cursor-pointer" onclick="rollDice()">
+                    <div class="side front">1</div>
+                    <div class="side back">6</div>
+                    <div class="side right">4</div>
+                    <div class="side left">3</div>
+                    <div class="side top">5</div>
+                    <div class="side bottom">2</div>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="flex justify-center gap-4">
+                <button onclick="rollDice()" class="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 transition">
+                    Roll Dice
+                </button>
+                <button onclick="resetGame()" class="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600 transition">
+                    Reset Game
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPlayer = 0;
+        let players = [];
+        let isRolling = false;
+
+        function startGame() {
+            const playerCount = parseInt(document.getElementById('playerCount').value);
+            document.getElementById('setup').classList.add('hidden');
+            document.getElementById('gameBoard').classList.remove('hidden');
+            
+            const playerContainer = document.querySelector('.grid');
+            playerContainer.innerHTML = '';
+            players = [];
+
+            for (let i = 0; i < playerCount; i++) {
+                players.push({
+                    score: 0,
+                    name: `Player ${i + 1}`
+                });
+
+                const playerCard = document.createElement('div');
+                playerCard.className = `bg-white rounded-lg p-4 shadow-lg ${i === 0 ? 'player-active' : ''}`;
+                playerCard.id = `player-${i}`;
+                playerCard.innerHTML = `
+                    <h2 class="text-xl font-bold mb-2">Player ${i + 1}</h2>
+                    <p class="text-3xl font-bold text-center">0</p>
+                    <p class="text-sm text-center mt-2">Total Score</p>
+                `;
+                playerContainer.appendChild(playerCard);
+            }
+        }
+
+        function getRandomRotation() {
+            const rotations = [
+                "rotateX(360deg) rotateY(360deg)", // 1
+                "rotateX(450deg) rotateY(360deg)", // 2
+                "rotateX(360deg) rotateY(270deg)", // 3
+                "rotateX(360deg) rotateY(90deg)",  // 4
+                "rotateX(270deg) rotateY(360deg)", // 5
+                "rotateX(180deg) rotateY(360deg)"  // 6
+            ];
+            return rotations[Math.floor(Math.random() * rotations.length)];
+        }
+
+        function rollDice() {
+            if (isRolling || players.length === 0) return;
+            isRolling = true;
+
+            const dice = document.querySelector('.dice');
+            const rotation = getRandomRotation();
+            dice.style.transform = rotation;
+
+            setTimeout(() => {
+                const result = Math.floor(Math.random() * 6) + 1;
+                players[currentPlayer].score += result;
+                
+                // Update player score
+                const playerCard = document.getElementById(`player-${currentPlayer}`);
+                playerCard.querySelector('p').textContent = players[currentPlayer].score;
+
+                // Remove active class from current player
+                playerCard.classList.remove('player-active');
+                
+                // Move to next player
+                currentPlayer = (currentPlayer + 1) % players.length;
+                
+                // Add active class to next player
+                document.getElementById(`player-${currentPlayer}`).classList.add('player-active');
+
+                // Check for winner
+                if (players[currentPlayer].score >= 30) {
+                    alert(`${players[currentPlayer].name} wins!`);
+                    resetGame();
+                }
+
+                isRolling = false;
+            }, 1500);
+        }
+
+        function resetGame() {
+            document.getElementById('gameBoard').classList.add('hidden');
+            document.getElementById('setup').classList.remove('hidden');
+            currentPlayer = 0;
+            players = [];
+            const dice = document.querySelector('.dice');
+            dice.style.transform = 'rotateX(0) rotateY(0)';
+        }
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
